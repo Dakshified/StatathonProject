@@ -1,21 +1,28 @@
 import flask
 app = flask.Flask(__name__)
 
-@app.route('/')
-def home():
-    return '''
-    <h1>AI-Powered Survey Tool</h1>
-    <form action="/create_survey" method="post">
-        <label for="question">Enter Survey Question:</label><br>
-        <input type="text" id="question" name="question"><br><br>
-        <input type="submit" value="Add Question">
-    </form>
-    '''
+# Simple translation dictionary
+translations = {
+    'en': {'welcome': 'Welcome to the AI-Powered Survey Tool', 'question_label': 'Enter Survey Question:', 'submit': 'Add Question', 'added': 'Survey Question Added'},
+    'hi': {'welcome': 'एआई-पावर्ड सर्वे टूल में आपका स्वागत है', 'question_label': 'सर्वे प्रश्न दर्ज करें:', 'submit': 'प्रश्न जोड़ें', 'added': 'सर्वे प्रश्न जोड़ा गया'}
+}
 
-@app.route('/create_survey', methods=['POST'])
-def create_survey():
-    question = flask.request.form['question']
-    return f'<h1>Survey Question Added</h1><p>{question}</p><a href="/">Back</a>'
+@app.route('/', methods=['GET', 'POST'])
+def home():
+    language = flask.request.args.get('lang', 'en')
+    trans = translations.get(language, translations['en'])
+    if flask.request.method == 'POST':
+        question = flask.request.form['question']
+        return f'<h1>{trans["added"]}</h1><p>{question}</p><a href="/?lang={language}">Back</a>'
+    return '''
+    <h1>{welcome}</h1>
+    <form action="/?lang={lang}" method="post">
+        <label for="question">{question_label}</label><br>
+        <input type="text" id="question" name="question"><br><br>
+        <input type="submit" value="{submit}">
+    </form>
+    <a href="/?lang=en">English</a> | <a href="/?lang=hi">हिंदी</a>
+    '''.format(welcome=trans['welcome'], question_label=trans['question_label'], submit=trans['submit'], lang=language)
 
 if __name__ == '__main__':
     app.run(debug=True)
