@@ -3,8 +3,8 @@ app = flask.Flask(__name__)
 
 # Simple translation dictionary
 translations = {
-    'en': {'welcome': 'Welcome to the AI-Powered Survey Tool', 'question_label': 'Enter Survey Question:', 'submit': 'Add Question', 'added': 'Survey Question Added', 'error': 'Error: Question cannot be empty or less than 5 characters.', 'id_label': 'Enter Identifier (e.g., Aadhaar/Phone):', 'prepopulate': 'Prepopulate Survey', 'adaptive': 'Adaptive Follow-up Added'},
-    'hi': {'welcome': 'एआई-पावर्ड सर्वे टूल में आपका स्वागत है', 'question_label': 'सर्वे प्रश्न दर्ज करें:', 'submit': 'प्रश्न जोड़ें', 'added': 'सर्वे प्रश्न जोड़ा गया', 'error': 'त्रुटि: प्रश्न खाली नहीं हो सकता या 5 अक्षरों से कम नहीं हो सकता।', 'id_label': 'पहचानकर्ता दर्ज करें (जैसे, आधार/फोन):', 'prepopulate': 'सर्वे को पहले से भरें', 'adaptive': 'अनुकूली फॉलो-अप जोड़ा गया'}
+    'en': {'welcome': 'Welcome to the AI-Powered Survey Tool', 'question_label': 'Enter Survey Question:', 'submit': 'Add Question', 'added': 'Survey Question Added', 'error': 'Error: Question cannot be empty or less than 5 characters.', 'id_label': 'Enter Identifier (e.g., Aadhaar/Phone):', 'prepopulate': 'Prepopulate Survey', 'adaptive': 'Adaptive Follow-up Added', 'response_label': 'Enter Response:', 'validation_error': 'Error: Response must be at least 2 characters.', 'auto_coded': 'Auto-Coded Category:'},
+    'hi': {'welcome': 'एआई-पावर्ड सर्वे टूल में आपका स्वागत है', 'question_label': 'सर्वे प्रश्न दर्ज करें:', 'submit': 'प्रश्न जोड़ें', 'added': 'सर्वे प्रश्न जोड़ा गया', 'error': 'त्रुटि: प्रश्न खाली नहीं हो सकता या 5 अक्षरों से कम नहीं हो सकता।', 'id_label': 'पहचानकर्ता दर्ज करें (जैसे, आधार/फोन):', 'prepopulate': 'सर्वे को पहले से भरें', 'adaptive': 'अनुकूली फॉलो-अप जोड़ा गया', 'response_label': 'प्रतिक्रिया दर्ज करें:', 'validation_error': 'त्रुटि: प्रतिक्रिया कम से कम 2 अक्षरों की होनी चाहिए।', 'auto_coded': 'स्वचालित कोडित श्रेणी:'}
 }
 
 # Mock database for prepopulation and adaptive logic
@@ -12,6 +12,15 @@ mock_data = {
     '123456789012': {'question': 'What is your age?', 'answer': '30', 'adaptive': 'Are you employed?'},
     '9876543210': {'question': 'What is your occupation?', 'answer': 'Engineer', 'adaptive': 'How many years of experience do you have?'}
 }
+
+# Simple auto-coding rules
+def auto_code_response(response):
+    if any(word.lower() in response.lower() for word in ['engineer', 'developer', 'technician']):
+        return 'Technical'
+    elif any(word.lower() in response.lower() for word in ['teacher', 'professor']):
+        return 'Education'
+    else:
+        return 'Other'
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
@@ -22,7 +31,11 @@ def home():
         if identifier and identifier in mock_data:
             question = mock_data[identifier]['question']
             adaptive_question = mock_data[identifier].get('adaptive', '')
-            return f'<h1>{trans["prepopulate"]}</h1><p>Pre-filled Question: {question}</p><p>{trans["adaptive"]}: {adaptive_question}</p><a href="/?lang={language}">Back</a>'
+            response = flask.request.form.get('response', '')
+            if not response or len(response) < 2:
+                return f'<h1>{trans["validation_error"]}</h1><a href="/?lang={language}">Back</a>'
+            category = auto_code_response(response)
+            return f'<h1>{trans["prepopulate"]}</h1><p>Pre-filled Question: {question}</p><p>{trans["adaptive"]}: {adaptive_question}</p><p>{trans["response_label"]} {response}</p><p>{trans["auto_coded"]} {category}</p><a href="/?lang={language}">Back</a>'
         question = flask.request.form.get('question')
         if not question or len(question) < 5:
             return f'<h1>{trans["error"]}</h1><a href="/?lang={language}">Back</a>'
@@ -32,6 +45,8 @@ def home():
     <form action="/?lang={lang}" method="post">
         <label for="identifier">{id_label}</label><br>
         <input type="text" id="identifier" name="identifier"><br><br>
+        <label for="response">{response_label}</label><br>
+        <input type="text" id="response" name="response"><br><br>
         <input type="submit" value="{prepopulate}">
     </form>
     <br>
@@ -41,7 +56,7 @@ def home():
         <input type="submit" value="{submit}">
     </form>
     <a href="/?lang=en">English</a> | <a href="/?lang=hi">हिंदी</a>
-    '''.format(welcome=trans['welcome'], question_label=trans['question_label'], submit=trans['submit'], id_label=trans['id_label'], prepopulate=trans['prepopulate'], lang=language)
+    '''.format(welcome=trans['welcome'], question_label=trans['question_label'], submit=trans['submit'], id_label=trans['id_label'], prepopulate=trans['prepopulate'], response_label=trans['response_label'], lang=language)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
